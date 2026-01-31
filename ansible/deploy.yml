@@ -11,11 +11,33 @@
     image_tag: "25-1"
 
   tasks:
-  - name: Show env
-  ansible.builtin.command: sh -lc 'env | egrep "KUBERNETES_SERVICE|KUBECONFIG" || true'
+    - name: Write kubeconfig using in-cluster serviceaccount
+      ansible.builtin.copy:
+        dest: /tmp/kubeconfig
+        mode: "0600"
+        content: |
+          apiVersion: v1
+          kind: Config
+          clusters:
+          - name: in-cluster
+            cluster:
+              certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              server: https://kubernetes.default.svc
+          contexts:
+          - name: in-cluster
+            context:
+              cluster: in-cluster
+              user: sa
+              namespace: {{ k8s_namespace }}
+          current-context: in-cluster
+          users:
+          - name: sa
+            user:
+              token: {{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/token') }}
 
-  - name: Can kubectl reach cluster
-  ansible.builtin.command: kubectl get ns
+    - name: Sanity check cluster access
+      ansible.builtin.command: kubectl --kubeconfig /tmp/kubeconfig get ns
+
     - name: Helm upgrade/install
       ansible.builtin.command: >
         helm upgrade --install {{ release_name }} {{ chart_path }}
@@ -24,3 +46,5 @@
         --set image.repository={{ image_repo }}
         --set image.tag={{ image_tag }}
         --set image.pullPolicy=IfNotPresent
+      environment:
+        KUBECONFIG: /tmp/kubeconfig
