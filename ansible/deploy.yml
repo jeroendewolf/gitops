@@ -1,22 +1,47 @@
-- name: PLAYBOOK VERSION MARKER
-  ansible.builtin.debug:
-    msg: "deploy.yml version = kubeconfig-fix-2026-01-31-17:15"
-
 - name: Deploy demo-spring with Helm
   hosts: localhost
   connection: local
   gather_facts: false
 
   vars:
-    k8s_namespace: default
+    k8s_namespace: "{{ k8s_namespace | default('default') }}"
+    k8s_api_server: "{{ k8s_api_server | default('https://kubernetes.default.svc') }}"
     release_name: demo-spring
     chart_path: "{{ playbook_dir }}/../demo-spring-chart"
     image_repo: demo-spring
-    image_tag: "25-1"
+    image_tag: "{{ image_tag | default('25-1') }}"
 
   tasks:
-    - name: Show kube env (debug)
-      ansible.builtin.command: sh -lc 'echo "KUBECONFIG=$KUBECONFIG"; ls -la ${KUBECONFIG:-/runner/.kube/config} 2>/dev/null || true'
+    - name: PLAYBOOK VERSION MARKER
+      ansible.builtin.debug:
+        msg: "deploy.yml version = kubeconfig-fix-2026-01-31-17:20"
+
+    - name: Write kubeconfig from AWX vars
+      ansible.builtin.copy:
+        dest: /tmp/kubeconfig
+        mode: "0600"
+        content: |
+          apiVersion: v1
+          kind: Config
+          clusters:
+          - name: cluster
+            cluster:
+              server: {{ k8s_api_server }}
+              certificate-authority-data: {{ k8s_ca_crt_b64 }}
+          contexts:
+          - name: awx
+            context:
+              cluster: cluster
+              user: awx
+              namespace: {{ k8s_namespace }}
+          current-context: awx
+          users:
+          - name: awx
+            user:
+              token: {{ k8s_bearer_token }}
+
+    - name: Debug - show kubeconfig server
+      ansible.builtin.command: sh -lc "grep -n 'server:' /tmp/kubeconfig || true"
 
     - name: Test kubectl access
       ansible.builtin.command: kubectl --kubeconfig /tmp/kubeconfig get ns
@@ -29,3 +54,5 @@
         --set image.repository={{ image_repo }}
         --set image.tag={{ image_tag }}
         --set image.pullPolicy=IfNotPresent
+      environment:
+        KUBECONFIG: /tmp/kubeconfig
