@@ -1,3 +1,7 @@
+- name: PLAYBOOK VERSION MARKER
+  ansible.builtin.debug:
+    msg: "deploy.yml version = kubeconfig-fix-2026-01-31-17:15"
+
 - name: Deploy demo-spring with Helm
   hosts: localhost
   connection: local
@@ -15,7 +19,7 @@
       ansible.builtin.command: sh -lc 'echo "KUBECONFIG=$KUBECONFIG"; ls -la ${KUBECONFIG:-/runner/.kube/config} 2>/dev/null || true'
 
     - name: Test kubectl access
-      ansible.builtin.command: kubectl get ns
+      ansible.builtin.command: kubectl --kubeconfig /tmp/kubeconfig get ns
 
     - name: Helm upgrade/install
       ansible.builtin.command: >
