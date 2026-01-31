@@ -9,7 +9,7 @@
     release_name: demo-spring
     chart_path: "{{ playbook_dir }}/../demo-spring-chart"
     image_repo: demo-spring
-    image_tag: "{{ image_tag | default('25-1') }}"
+    app_image_tag: "{{ (image_tag | default('25-1')) | string }}"
 
   tasks:
     - name: PLAYBOOK VERSION MARKER
@@ -52,7 +52,7 @@
         --namespace {{ k8s_namespace }}
         --create-namespace
         --set image.repository={{ image_repo }}
-        --set image.tag={{ image_tag }}
+        --set image.tag={{ app_image_tag }}
         --set image.pullPolicy=IfNotPresent
       environment:
         KUBECONFIG: /tmp/kubeconfig
