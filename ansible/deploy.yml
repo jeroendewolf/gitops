@@ -1,10 +1,11 @@
 - name: Deploy demo-spring with Helm
   hosts: localhost
+  connection: local
   gather_facts: false
 
   vars:
+    k8s_namespace: default
     release_name: demo-spring
-    namespace: default
     chart_path: "{{ playbook_dir }}/../demo-spring-chart"
     image_repo: demo-spring
     image_tag: "25-1"
@@ -13,7 +14,7 @@
     - name: Helm upgrade/install
       ansible.builtin.command: >
         helm upgrade --install {{ release_name }} {{ chart_path }}
-        --namespace {{ namespace }}
+        --namespace {{ k8s_namespace }}
         --create-namespace
         --set image.repository={{ image_repo }}
         --set image.tag={{ image_tag }}
