@@ -11,6 +11,11 @@
     image_tag: "25-1"
 
   tasks:
+  - name: Show env
+  ansible.builtin.command: sh -lc 'env | egrep "KUBERNETES_SERVICE|KUBECONFIG" || true'
+
+  - name: Can kubectl reach cluster
+  ansible.builtin.command: kubectl get ns
     - name: Helm upgrade/install
       ansible.builtin.command: >
         helm upgrade --install {{ release_name }} {{ chart_path }}
